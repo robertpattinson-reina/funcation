@@ -1,0 +1,13 @@
+# Secrets
+Secrets.xcconfig
+GoogleService-Info.plist
+
+# Xcode
+.DS_Store
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
