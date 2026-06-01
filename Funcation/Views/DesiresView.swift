@@ -10,155 +10,186 @@
 import SwiftUI
 
 struct DesiresView: View {
-    
-    // The trip this Desires screen belongs to.
     let trip: Trip
-    
-    // ViewModel handles validation and Firebase saving.
     @StateObject private var suggestionViewModel = SuggestionViewModel()
-    
-    // Form fields for creating a suggestion.
     @State private var title: String = ""
     @State private var estimatedCost: String = ""
     @State private var link: String = ""
     @State private var selectedCategory: SuggestionCategory = .activity
     @State private var isPerPerson: Bool = false
-    
-    // Simple user feedback.
     @State private var statusMessage: String = ""
-    
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Add a Desire") {
+                Section {
                     TextField("Title", text: $title)
-                    
+
                     Picker("Category", selection: $selectedCategory) {
                         ForEach(SuggestionCategory.allCases, id: \.self) { category in
-                            Text(category.rawValue.capitalized)
+                            Label(category.rawValue.capitalized, systemImage: AppTheme.icon(for: category))
                                 .tag(category)
                         }
                     }
-                    
+
                     TextField("Estimated cost", text: $estimatedCost)
                         .keyboardType(.decimalPad)
-                    
+
                     Picker("Cost Type", selection: $isPerPerson) {
                         Text("Total").tag(false)
                         Text("Per Person").tag(true)
                     }
                     .pickerStyle(.segmented)
-                    
+
                     TextField("Optional link", text: $link)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled(true)
-                    
+
                     Button("Save Desire") {
                         saveDesire()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.primaryBlue)
+                    .tint(AppTheme.accentCoral)
+                } header: {
+                    Label("Add a Desire", systemImage: "heart.fill")
+                        .foregroundStyle(AppTheme.accentCoral)
                 }
-                
-                Section("Saved Desires") {
+
+                Section {
                     if suggestionViewModel.suggestions.isEmpty {
-                        Text("No desires added yet.")
-                            .foregroundStyle(.secondary)
+                        VStack(spacing: 10) {
+                            Image(systemName: "heart.slash")
+                                .font(.system(size: 32))
+                                .foregroundStyle(AppTheme.primaryBlue.opacity(0.35))
+                            Text("No desires added yet.")
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
                     } else {
                         ForEach(suggestionViewModel.suggestions, id: \.id) { suggestion in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(suggestion.title)
-                                    .font(.headline)
-                                    .foregroundStyle(AppTheme.deepBlue)
-                                
-                                Text(suggestion.category.rawValue.capitalized)
-                                    .font(.subheadline)
-                                    .foregroundStyle(AppTheme.primaryBlue)
-                                
-                                Text(
-                                    suggestion.isPerPerson
-                                    ? "Estimated Cost: $\(suggestion.estimatedCost, specifier: "%.2f") per person"
-                                    : "Estimated Cost: $\(suggestion.estimatedCost, specifier: "%.2f") total"
-                                )
-                                .font(.subheadline)
-                                
-                                Text("Yes: \(suggestion.votesYes) | No: \(suggestion.votesNo)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                
-                                HStack {
-                                    Button("Yes") {
-                                        suggestionViewModel.voteOnSuggestion(
-                                            tripID: trip.id,
-                                            suggestionID: suggestion.id,
-                                            isYesVote: true
-                                        ) { success in
-                                            statusMessage = success ? "Yes vote saved." : "Could not save vote."
-                                        }
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(suggestionViewModel.userVotes[suggestion.id] == true ? AppTheme.primaryBlue : .gray)
-
-                                    Button("No") {
-                                        suggestionViewModel.voteOnSuggestion(
-                                            tripID: trip.id,
-                                            suggestionID: suggestion.id,
-                                            isYesVote: false
-                                        ) { success in
-                                            statusMessage = success ? "No vote saved." : "Could not save vote."
-                                        }
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(suggestionViewModel.userVotes[suggestion.id] == false ? .red : .gray)
-                                }
-                                .padding(.top, 4)
-                                
-                                if let link = suggestion.link,
-                                   let url = URL(string: link) {
-                                    Link("Open Link", destination: url)
-                                        .font(.subheadline)
-                                }
-                            }
-                            .padding()
-                            .background(AppTheme.softBlue)
-                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
-                            .shadow(radius: AppTheme.cardShadowRadius)
-                            .padding(.vertical, 4)
+                            desireCard(for: suggestion)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         }
                     }
+                } header: {
+                    Label("Saved Desires", systemImage: "list.heart")
+                        .foregroundStyle(AppTheme.primaryBlue)
                 }
-                
+
                 if !statusMessage.isEmpty {
-                    Section("Status") {
+                    Section {
                         Text(statusMessage)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(AppTheme.backgroundGradient)
+            .background(AppTheme.pageBackground)
             .navigationTitle("Desires")
             .onAppear {
                 suggestionViewModel.fetchSuggestions(for: trip.id)
             }
         }
     }
-    
-    /// Validates form input, converts cost text to a number,
-    /// and sends the desire to the ViewModel.
+
+    @ViewBuilder
+    private func desireCard(for suggestion: Suggestion) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                Text(suggestion.title)
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.deepBlue)
+
+                Spacer()
+
+                Label(suggestion.category.rawValue.capitalized,
+                      systemImage: AppTheme.icon(for: suggestion.category))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.color(for: suggestion.category))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppTheme.color(for: suggestion.category).opacity(0.12))
+                    .clipShape(Capsule())
+            }
+
+            Text(
+                suggestion.isPerPerson
+                ? "$\(suggestion.estimatedCost, specifier: "%.2f") / person"
+                : "$\(suggestion.estimatedCost, specifier: "%.2f") total"
+            )
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                Button {
+                    suggestionViewModel.voteOnSuggestion(
+                        tripID: trip.id,
+                        suggestionID: suggestion.id,
+                        isYesVote: true
+                    ) { success in
+                        statusMessage = success ? "" : "Could not save vote."
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hand.thumbsup.fill")
+                        Text("\(suggestion.votesYes)")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(suggestionViewModel.userVotes[suggestion.id] == true
+                    ? Color(red: 0.15, green: 0.72, blue: 0.42)
+                    : Color(uiColor: .systemGray4))
+
+                Button {
+                    suggestionViewModel.voteOnSuggestion(
+                        tripID: trip.id,
+                        suggestionID: suggestion.id,
+                        isYesVote: false
+                    ) { success in
+                        statusMessage = success ? "" : "Could not save vote."
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hand.thumbsdown.fill")
+                        Text("\(suggestion.votesNo)")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(suggestionViewModel.userVotes[suggestion.id] == false
+                    ? Color(red: 0.92, green: 0.25, blue: 0.18)
+                    : Color(uiColor: .systemGray4))
+
+                Spacer()
+
+                if let link = suggestion.link, let url = URL(string: link) {
+                    Link(destination: url) {
+                        Image(systemName: "link")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.primaryBlue)
+                    }
+                }
+            }
+            .padding(.top, 2)
+        }
+        .padding()
+        .background(AppTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+        .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, y: 3)
+    }
+
     private func saveDesire() {
-        
         let trimmedCost = estimatedCost.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Convert the cost from String to Double.
-        // If empty, default to 0. This supports free/unknown-cost items.
         let cost = PriceParser.parsePrice(trimmedCost)
-        
         let cleanedLink = link.trimmingCharacters(in: .whitespacesAndNewlines)
         let optionalLink = cleanedLink.isEmpty ? nil : cleanedLink
-        
+
         suggestionViewModel.addSuggestion(
             tripID: trip.id,
             title: title,
@@ -170,8 +201,6 @@ struct DesiresView: View {
             if success {
                 statusMessage = "Desire saved successfully."
                 suggestionViewModel.fetchSuggestions(for: trip.id)
-                
-                // Clear form after successful save.
                 title = ""
                 estimatedCost = ""
                 link = ""
