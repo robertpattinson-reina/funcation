@@ -71,6 +71,19 @@ final class FirebaseService {
             }
         
     }
+    /// Adds a user to a trip's member list without overwriting existing members.
+    func addMember(userID: String, toTrip tripID: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        db.collection("trips").document(tripID).updateData([
+            "members": FieldValue.arrayUnion([userID])
+        ]) { error in
+            if let error = error {
+                completion(.failure(error))
+            } else {
+                completion(.success(()))
+            }
+        }
+    }
+
     /// Saves a suggestion inside a trip's desires subcollection.
     func saveSuggestion(_ suggestion: Suggestion, completion: @escaping (Result<Void, Error>) -> Void) {
         do {

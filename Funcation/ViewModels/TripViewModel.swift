@@ -20,15 +20,15 @@ class TripViewModel: ObservableObject {
     /// Creates a new trip and saves it to Firebase.
     /// Calls completion with true only if the save succeeds.
     func createTrip(name: String, completion: @escaping (Bool) -> Void) {
-        
+
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         guard !trimmedName.isEmpty else {
             print("Invalid trip name.")
             completion(false)
             return
         }
-        
+
         // Make sure there is an authenticated Firebase user before creating a trip.
         guard let userID = AuthService.shared.currentUserID else {
             print("No authenticated user found.")
@@ -47,7 +47,7 @@ class TripViewModel: ObservableObject {
             members: [userID],
             createdAt: Date()
         )
-        
+
         FirebaseService.shared.saveTrip(newTrip) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
@@ -56,8 +56,17 @@ class TripViewModel: ObservableObject {
                     print("Trip successfully saved to Firestore.")
                     print("Name: \(newTrip.name)")
                     print("Invite Code: \(newTrip.inviteCode)")
+
+                    // Link the trip to the creator's account. Best-effort:
+                    // the trip is already saved, so we don't fail on this.
+                    UserService.shared.addTrip(tripID: newTrip.id, toUser: userID) { linkResult in
+                        if case .failure(let error) = linkResult {
+                            print("Trip saved, but failed to link it to the user: \(error.localizedDescription)")
+                        }
+                    }
+
                     completion(true)
-                    
+
                 case .failure(let error):
                     print("Failed to save trip: \(error.localizedDescription)")
                     completion(false)
@@ -89,8 +98,24 @@ class TripViewModel: ObservableObject {
                     print("Trip successfully loaded from Firestore.")
                     print("Trip Name: \(trip.name)")
                     print("Invite Code: \(trip.inviteCode)")
+
+                    // Register the joiner as a member and link the trip to
+                    // their account so it shows up across sessions.
+                    if let userID = AuthService.shared.currentUserID {
+                        FirebaseService.shared.addMember(userID: userID, toTrip: trip.id) { memberResult in
+                            if case .failure(let error) = memberResult {
+                                print("Joined trip, but failed to add member: \(error.localizedDescription)")
+                            }
+                        }
+                        UserService.shared.addTrip(tripID: trip.id, toUser: userID) { linkResult in
+                            if case .failure(let error) = linkResult {
+                                print("Joined trip, but failed to link it to the user: \(error.localizedDescription)")
+                            }
+                        }
+                    }
+
                     completion(true)
-                    
+
                 case .failure(let error):
                     print("Failed to join trip: \(error.localizedDescription)")
                     completion(false)

@@ -33,6 +33,12 @@ struct TripDashboardView: View {
                 .tabItem {
                     Label("Budget", systemImage: "dollarsign.circle")
                 }
+
+            // MARK: - Group Tab
+            GroupView(trip: trip)
+                .tabItem {
+                    Label("Group", systemImage: "person.2")
+                }
         }
         .tint(AppTheme.primaryBlue)
         .navigationTitle(trip.name)

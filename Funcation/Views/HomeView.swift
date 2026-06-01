@@ -9,6 +9,11 @@
 import SwiftUI
 
 struct HomeView: View {
+    @EnvironmentObject private var session: SessionStore
+
+    // The signed-in account.
+    let user: AppUser
+
     @State private var tripName: String = ""
     @State private var inviteCode: String = ""
     @StateObject private var tripViewModel = TripViewModel()
@@ -20,6 +25,17 @@ struct HomeView: View {
                 VStack(spacing: 0) {
                     // MARK: - Hero Header
                     VStack(spacing: 14) {
+                        HStack {
+                            Spacer()
+                            Button {
+                                session.signOut()
+                            } label: {
+                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.85))
+                            }
+                        }
+
                         ZStack {
                             Circle()
                                 .fill(.white.opacity(0.15))
@@ -29,8 +45,8 @@ struct HomeView: View {
                                 .foregroundStyle(.white)
                         }
 
-                        Text("Funcation")
-                            .font(.system(size: 36, weight: .black, design: .rounded))
+                        Text("Hi, \(user.name)!")
+                            .font(.system(size: 32, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
 
                         Text("Group vacation planning, simplified.")
@@ -39,7 +55,7 @@ struct HomeView: View {
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 80)
+                    .padding(.top, 64)
                     .padding(.bottom, 48)
                     .padding(.horizontal)
                     .background(AppTheme.heroGradient)
@@ -116,5 +132,12 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView()
+    HomeView(user: AppUser(
+        id: "preview",
+        name: "Alex",
+        phoneNumber: "+15551234567",
+        tripIDs: [],
+        createdAt: Date()
+    ))
+    .environmentObject(SessionStore())
 }
