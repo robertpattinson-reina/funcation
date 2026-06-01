@@ -3,117 +3,109 @@
 //  Funcation
 //
 //  Home / Creation screen.
-//  This is the app's starting point, where users can either
-//  create a new trip or join an existing one with an invite code.
+//  Starting point where users create a new trip or join one with an invite code.
 //
 
 import SwiftUI
 
 struct HomeView: View {
-    // MARK: - State Properties
-
-    // Stores the name of a new trip the user wants to create.
     @State private var tripName: String = ""
-
-    // Stores the invite code entered by the user to join a trip.
     @State private var inviteCode: String = ""
-    
     @StateObject private var tripViewModel = TripViewModel()
     @State private var navigateToTrip = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    // MARK: - App Header
-                    VStack(spacing: 8) {
+                VStack(spacing: 0) {
+                    // MARK: - Hero Header
+                    VStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(AppTheme.primaryBlue)
-                                .frame(width: 82, height: 82)
-                                .shadow(radius: AppTheme.cardShadowRadius)
-                            
-                            Text("F")
-                                .font(.system(size: 44, weight: .black, design: .rounded))
+                                .fill(.white.opacity(0.15))
+                                .frame(width: 88, height: 88)
+                            Image(systemName: "airplane")
+                                .font(.system(size: 38, weight: .semibold))
                                 .foregroundStyle(.white)
-                                .rotationEffect(.degrees(-8))
                         }
-                        
-                        Text("Funcation")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.deepBlue)
 
-                        Text("Making group vacation planning easier.")
+                        Text("Funcation")
+                            .font(.system(size: 36, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        Text("Group vacation planning, simplified.")
                             .font(.subheadline)
-                            .foregroundStyle(AppTheme.primaryBlue)
+                            .foregroundStyle(.white.opacity(0.75))
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 24)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 80)
+                    .padding(.bottom, 48)
+                    .padding(.horizontal)
+                    .background(AppTheme.heroGradient)
 
-                    // MARK: - Create Trip Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Create a Trip")
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.deepBlue)
+                    // MARK: - Cards
+                    VStack(spacing: 16) {
+                        // Create Trip
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Create a Trip", systemImage: "plus.circle.fill")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.deepBlue)
 
-                        TextField("Enter trip name", text: $tripName)
-                            .textFieldStyle(.roundedBorder)
+                            TextField("Enter trip name", text: $tripName)
+                                .textFieldStyle(.roundedBorder)
 
-                        Button(action: {
-                            // Generate a readable invite code for the new trip.
-                            tripViewModel.createTrip(name: tripName) { success in
-                                if success {
-                                    navigateToTrip = true
+                            Button(action: {
+                                tripViewModel.createTrip(name: tripName) { success in
+                                    if success { navigateToTrip = true }
                                 }
+                            }) {
+                                Label("Create Trip", systemImage: "arrow.right.circle.fill")
+                                    .frame(maxWidth: .infinity)
                             }
-                        }) {
-                            Text("Create Trip")
-                                .frame(maxWidth: .infinity)
+                            .buttonStyle(.borderedProminent)
+                            .tint(AppTheme.accentCoral)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppTheme.primaryBlue)
+                        .padding()
+                        .background(AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+                        .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, y: 4)
+
+                        // Join Trip
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("Join with Invite Code", systemImage: "link.circle.fill")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.deepBlue)
+
+                            TextField("Enter invite code", text: $inviteCode)
+                                .textFieldStyle(.roundedBorder)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled(true)
+
+                            Button(action: {
+                                tripViewModel.joinTrip(inviteCode: inviteCode) { success in
+                                    if success { navigateToTrip = true }
+                                }
+                            }) {
+                                Label("Join Trip", systemImage: "person.badge.plus")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(AppTheme.primaryBlue)
+                        }
+                        .padding()
+                        .background(AppTheme.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+                        .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, y: 4)
                     }
                     .padding()
-                    .background(AppTheme.softBlue)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(radius: AppTheme.cardShadowRadius)
-
-                    // MARK: - Join Trip Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Join with Invite Code")
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.deepBlue)
-
-                        TextField("Enter invite code", text: $inviteCode)
-                            .textFieldStyle(.roundedBorder)
-                            .textInputAutocapitalization(.characters)
-                            .autocorrectionDisabled(true)
-
-                        Button(action: {
-                            tripViewModel.joinTrip(inviteCode: inviteCode) { success in
-                                if success {
-                                    navigateToTrip = true
-                                }
-                            }
-                        }) {
-                            Text("Join Trip")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(AppTheme.primaryBlue)
-                    }
-                    .padding()
-                    .background(AppTheme.softBlue)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(radius: AppTheme.cardShadowRadius)
-
-                    Spacer()
+                    .frame(maxWidth: .infinity, minHeight: 350, alignment: .top)
+                    .background(AppTheme.pageBackground)
                 }
-                .padding()
             }
-            .background(AppTheme.backgroundGradient)
-            .navigationTitle("Home")
+            .ignoresSafeArea(edges: .top)
+            .background(AppTheme.pageBackground)
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $navigateToTrip) {
                 if let trip = tripViewModel.currentTrip {
                     TripDashboardView(trip: trip)

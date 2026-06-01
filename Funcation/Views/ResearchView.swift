@@ -10,54 +10,35 @@
 import SwiftUI
 
 struct ResearchView: View {
-    
-    // The active trip this research belongs to.
     let trip: Trip
-    
-    // ViewModel used to save extracted research as a Desire.
     @StateObject private var suggestionViewModel = SuggestionViewModel()
-    
-    // User input.
     @State private var urlInput: String = ""
-    
-    // Extracted placeholder fields.
     @State private var extractedTitle: String = ""
     @State private var extractedPrice: String = ""
     @State private var extractedLocation: String = ""
-    
-    // User-selected category before saving to Desires.
     @State private var selectedCategory: SuggestionCategory = .activity
-    
-    // User feedback.
     @State private var statusMessage: String = ""
-    
-    // Rely on the boolean flag instead of title as a signal.
     @State private var hasExtractedInfo: Bool = false
-    
-    // For spinner during extraction.
     @State private var isExtracting: Bool = false
-    
-    // For the confirmation message.
     @State private var showConfirmation: Bool = false
-    
     @State private var isPerPerson: Bool = false
-    
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Paste a Link") {
+                Section {
                     TextField("Enter URL", text: $urlInput)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled(true)
-                    
+
                     Button("Extract Info") {
                         extractInfo()
                     }
                     .disabled(urlInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.primaryBlue)
-                    
+                    .tint(AppTheme.accentCoral)
+
                     if isExtracting {
                         HStack {
                             ProgressView()
@@ -65,9 +46,12 @@ struct ResearchView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                } header: {
+                    Label("Paste a Link", systemImage: "link")
+                        .foregroundStyle(AppTheme.primaryBlue)
                 }
-                
-                Section("Extracted Information") {
+
+                Section {
                     if !hasExtractedInfo {
                         Text("No data extracted yet.")
                             .foregroundStyle(.secondary)
@@ -90,61 +74,63 @@ struct ResearchView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        
+
                         Picker("Cost Type", selection: $isPerPerson) {
                             Text("Total").tag(false)
                             Text("Per Person").tag(true)
                         }
                         .pickerStyle(.segmented)
-                        
+
                         Picker("Category", selection: $selectedCategory) {
                             ForEach(SuggestionCategory.allCases, id: \.self) { category in
-                                Text(category.rawValue.capitalized)
+                                Label(category.rawValue.capitalized, systemImage: AppTheme.icon(for: category))
                                     .tag(category)
                             }
                         }
-                        
+
                         Button("Add to Desires") {
                             addToDesires()
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(AppTheme.primaryBlue)
                     }
+                } header: {
+                    Label("Extracted Information", systemImage: "sparkles")
+                        .foregroundStyle(AppTheme.primaryBlue)
                 }
-                
+
                 if !statusMessage.isEmpty {
-                    Section("Status") {
+                    Section {
                         Text(statusMessage)
                             .foregroundStyle(.secondary)
                     }
                 }
-                
+
                 if showConfirmation {
                     Section {
                         Label("Added to Desires", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color(red: 0.15, green: 0.72, blue: 0.42))
                     }
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(AppTheme.backgroundGradient)
+            .background(AppTheme.pageBackground)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Research")
         }
     }
-    
-    /// Uses OpenAI to extract travel information from the pasted URL.
+
     private func extractInfo() {
         let trimmedURL = urlInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         guard !trimmedURL.isEmpty else {
             statusMessage = "Please enter a URL."
             return
         }
-        
+
         isExtracting = true
         statusMessage = "Extracting information..."
-        
+
         OpenAIService.shared.extractTravelInfo(from: trimmedURL) { result in
             DispatchQueue.main.async {
                 switch result {
@@ -154,13 +140,13 @@ struct ResearchView: View {
                     extractedLocation = travelInfo.location
                     hasExtractedInfo = true
                     isExtracting = false
-                    
+
                     if travelInfo.price.isEmpty {
                         statusMessage = "Price not found. Please enter an estimate."
                     } else {
                         statusMessage = "Information extracted. Review and add to Desires."
                     }
-                    
+
                 case .failure(let error):
                     statusMessage = "Extraction failed: \(error.localizedDescription)"
                     isExtracting = false
@@ -168,8 +154,7 @@ struct ResearchView: View {
             }
         }
     }
-    
-    /// Saves the extracted research item as a Desire for this trip.
+
     private func addToDesires() {
         let cost = PriceParser.parsePrice(extractedPrice)
         let cleanedLink = urlInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -179,7 +164,7 @@ struct ResearchView: View {
             statusMessage = "Please enter a title before adding to Desires."
             return
         }
-        
+
         suggestionViewModel.addSuggestion(
             tripID: trip.id,
             title: cleanedTitle,
@@ -192,7 +177,6 @@ struct ResearchView: View {
                 statusMessage = "Research item added to Desires."
                 isPerPerson = false
 
-                // Show temporary confirmation message.
                 withAnimation {
                     showConfirmation = true
                 }

@@ -9,99 +9,124 @@
 import SwiftUI
 
 struct BudgetView: View {
-    
-    // The trip this Budget screen belongs to.
     let trip: Trip
-    
-    // ViewModel used to fetch desires from Firebase.
     @StateObject private var suggestionViewModel = SuggestionViewModel()
-    
-    // Approved desires are desires with more Yes votes than No votes.
+
     private var approvedSuggestions: [Suggestion] {
-        suggestionViewModel.suggestions.filter { suggestion in
-            suggestion.votesYes > suggestion.votesNo
-        }
+        suggestionViewModel.suggestions.filter { $0.votesYes > $0.votesNo }
     }
-    
-    // Total cost of approved desires.
+
     private var totalCost: Double {
         let memberCount = max(trip.members.count, 1)
-        
         return approvedSuggestions.reduce(0) { total, suggestion in
-            if suggestion.isPerPerson {
-                return total + (suggestion.estimatedCost * Double(memberCount))
-            } else {
-                return total + suggestion.estimatedCost
-            }
+            suggestion.isPerPerson
+                ? total + (suggestion.estimatedCost * Double(memberCount))
+                : total + suggestion.estimatedCost
         }
     }
-    
-    // Per-person estimate based on trip member count.
+
     private var perPersonCost: Double {
-        let memberCount = max(trip.members.count, 1)
-        return totalCost / Double(memberCount)
+        totalCost / Double(max(trip.members.count, 1))
     }
-    
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Budget Summary") {
-                    VStack(alignment: .leading, spacing: 8) {
+            ScrollView {
+                VStack(spacing: 0) {
+                    // MARK: - Budget Summary Hero
+                    VStack(spacing: 10) {
                         Text("Total Estimated Cost")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.75))
+
                         Text("$\(totalCost, specifier: "%.2f")")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.deepBlue)
-                        
-                        Text("Per-Person Estimate: $\(perPersonCost, specifier: "%.2f")")
-                            .foregroundStyle(AppTheme.primaryBlue)
-                        
-                        Text("Group Members: \(max(trip.members.count, 1))")
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 52, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        HStack(spacing: 20) {
+                            Label("$\(perPersonCost, specifier: "%.2f") / person", systemImage: "person.fill")
+                            Label("\(max(trip.members.count, 1)) members", systemImage: "person.2.fill")
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.75))
                     }
-                    .padding(.vertical, 6)
-                }
-                
-                Section("Approved Desires") {
-                    if approvedSuggestions.isEmpty {
-                        Text("No approved desires yet.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(approvedSuggestions) { suggestion in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(suggestion.title)
-                                    .font(.headline)
-                                    .foregroundStyle(AppTheme.deepBlue)
-                                
-                                Text(suggestion.category.rawValue.capitalized)
-                                    .font(.subheadline)
-                                    .foregroundStyle(AppTheme.primaryBlue)
-                                
-                                Text(
-                                    suggestion.isPerPerson
-                                    ? "Estimated Cost: $\(suggestion.estimatedCost, specifier: "%.2f") per person"
-                                    : "Estimated Cost: $\(suggestion.estimatedCost, specifier: "%.2f") total"
-                                )
-                                
-                                Text("Yes: \(suggestion.votesYes) | No: \(suggestion.votesNo)")
-                                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 32)
+                    .padding(.bottom, 36)
+                    .padding(.horizontal)
+                    .background(AppTheme.heroGradient)
+
+                    // MARK: - Approved Desires List
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Approved Desires", systemImage: "checkmark.seal.fill")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.deepBlue)
+                            .padding(.horizontal, 4)
+
+                        if approvedSuggestions.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "checkmark.seal")
+                                    .font(.system(size: 40))
+                                    .foregroundStyle(AppTheme.primaryBlue.opacity(0.35))
+                                Text("Vote on desires to see them here.")
                                     .foregroundStyle(.secondary)
                             }
-                            .padding()
-                            .background(AppTheme.softBlue)
-                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
-                            .shadow(radius: AppTheme.cardShadowRadius)
-                            .padding(.vertical, 4)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else {
+                            ForEach(approvedSuggestions) { suggestion in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack(alignment: .top) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(suggestion.title)
+                                                .font(.headline)
+                                                .foregroundStyle(AppTheme.deepBlue)
+
+                                            Text(
+                                                suggestion.isPerPerson
+                                                ? "$\(suggestion.estimatedCost, specifier: "%.2f") / person"
+                                                : "$\(suggestion.estimatedCost, specifier: "%.2f") total"
+                                            )
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                        }
+
+                                        Spacer()
+
+                                        Label(suggestion.category.rawValue.capitalized,
+                                              systemImage: AppTheme.icon(for: suggestion.category))
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(AppTheme.color(for: suggestion.category))
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(AppTheme.color(for: suggestion.category).opacity(0.12))
+                                            .clipShape(Capsule())
+                                    }
+
+                                    HStack(spacing: 16) {
+                                        Label("\(suggestion.votesYes) yes", systemImage: "hand.thumbsup.fill")
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(Color(red: 0.15, green: 0.72, blue: 0.42))
+                                        Label("\(suggestion.votesNo) no", systemImage: "hand.thumbsdown.fill")
+                                            .font(.caption.weight(.medium))
+                                            .foregroundStyle(Color(red: 0.92, green: 0.25, blue: 0.18))
+                                    }
+                                }
+                                .padding()
+                                .background(AppTheme.cardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius))
+                                .shadow(color: AppTheme.cardShadowColor, radius: AppTheme.cardShadowRadius, y: 3)
+                            }
                         }
                     }
+                    .padding()
+                    .frame(maxWidth: .infinity, minHeight: 300, alignment: .top)
+                    .background(AppTheme.pageBackground)
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(AppTheme.backgroundGradient)
+            .background(AppTheme.pageBackground)
             .navigationTitle("Budget")
+            .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 suggestionViewModel.fetchSuggestions(for: trip.id)
             }
